@@ -1,0 +1,31 @@
+# Claude Code
+.claude/
+*.jsonl
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Repomix output (generated per-project, not committed)
+repomix-output.txt
+repomix-output.xml
+
+# Node (if npx cache appears)
+node_modules/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
