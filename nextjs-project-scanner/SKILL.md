@@ -24,6 +24,10 @@ Scans a Next.js project -> extracts architectural patterns in two layers (agnost
    Repomix               structure    two-layer       SKILL.md +      test with
    packed file            + deps       patterns        references/     sample idea
                                                        + .context/
+                                    ↑
+                          Large project or user request?
+                          YES --> Parallel Extraction Mode
+                                 (8 subagents + validator)
 ```
 
 ---
@@ -112,6 +116,115 @@ DECISIONS:
 ```
 
 Look for evidence in: comments, README, PR descriptions, commit messages, and the absence of alternatives in dependencies.
+
+---
+
+## Parallel Extraction Mode (large projects / on demand)
+
+**Activates when:**
+- The scan output shows `LARGE_PROJECT: true` (>= 2000 source files), OR
+- The user explicitly requests it ("use subagents", "parallel scan", "deep scan", "scan with agents")
+
+**Why:** A single agent extracting patterns from a 5,000+ file project will exhaust its context window. Parallel extraction delegates each concern to a dedicated subagent with its own clean context, then a validator agent checks consistency.
+
+### How it works
+
+After running the scan script (Phase 1, Step 2), **instead of** doing Steps 3-5 in the current context, spawn subagents in parallel:
+
+#### Extraction subagents (launch ALL in parallel)
+
+| # | Agent | What it reads | What it produces |
+|---|-------|---------------|------------------|
+| 1 | **Architecture** | Directory tree, config files (next.config, tsconfig, eslint, middleware.ts), package.json | `references/architecture.md` |
+| 2 | **Routing + Pages** | App Router structure (layout, page, loading, error, not-found), dynamic routes, route groups, parallel routes | `references/routing.md` |
+| 3 | **Components** | 3 Server Components + 3 Client Components, 'use client' boundary analysis, composition patterns | `references/components.md` + `references/ui-styling.md` |
+| 4 | **Data Fetching + Server Actions** | async Server Components, fetch() configs, 'use server' files, revalidation, ISR/SSG patterns | `references/data-fetching.md` + `references/server-actions.md` |
+| 5 | **API Routes + Middleware** | route.ts handlers, middleware.ts, NextRequest/NextResponse patterns, auth middleware | `references/api-routes.md` + `references/auth-middleware.md` |
+| 6 | **State + Forms** | Client state (Zustand/Redux), form components, validation schemas, server action form integration | `references/state.md` + `references/forms.md` |
+| 7 | **Testing** | Test files, test utils, mocks, fixtures, component tests vs integration tests | `references/testing.md` + `references/error-handling.md` |
+| 8 | **Coding Style** | 5 representative files across categories, scan output coding style signals section | `references/coding-style.md` + `references/conventions.md` |
+
+**Each subagent receives:**
+1. The scan output (file listings for its category only)
+2. The relevant section from `<skill-path>/references/scan-checklist.md`
+3. Instructions: read 2-3 files via smart sampling, extract two-layer patterns (architecture + implementation), note inconsistencies, produce the reference file(s)
+
+**Prompt template for each subagent:**
+```
+You are extracting {CATEGORY} patterns from a Next.js project at {PROJECT_PATH}.
+
+SCAN OUTPUT (your category):
+{filtered scan output}
+
+CHECKLIST (what to extract):
+{relevant scan-checklist.md section}
+
+INSTRUCTIONS:
+1. Read 2-3 representative files using smart sampling (most complex, most recent, standard)
+2. Extract patterns as generic templates with {placeholders}
+3. Classify each as ARCHITECTURAL (agnostic) or IMPLEMENTATION (Next.js-specific)
+4. Note inconsistencies (files that don't follow the majority)
+5. Document WHY the team chose this pattern (decision log)
+6. Output the reference file(s) in markdown format with both layers
+
+Do NOT read files outside your category. Focus only on {CATEGORY}.
+```
+
+#### Validator agent (runs AFTER all extraction agents complete)
+
+Once all 8 subagents return their reference files, spawn a **validator agent** that:
+
+1. **Reads all generated reference files** together
+2. **Cross-checks consistency:**
+   - Server vs Client boundaries in `components.md` align with `data-fetching.md` and `state.md`
+   - Naming conventions in `conventions.md` match patterns in all other files
+   - Import paths in code examples are consistent with `architecture.md` structure
+   - Server Actions patterns in `server-actions.md` align with form patterns in `forms.md`
+   - Middleware patterns in `auth-middleware.md` are consistent with routing in `routing.md`
+3. **Checks completeness:**
+   - Every reference file has BOTH layers (architecture + implementation)
+   - All code examples use `{placeholders}` not hardcoded names
+   - No duplicate patterns across files (each concern in exactly one file)
+   - Decision log entries present for major choices
+4. **Produces a validation report:**
+   - List of conflicts found (with file + line references)
+   - List of missing patterns
+   - Suggested fixes
+5. **Applies fixes** to the reference files if conflicts are found
+
+**Prompt template for the validator:**
+```
+You are validating the extracted patterns from a Next.js project.
+
+REFERENCE FILES:
+{all reference file contents}
+
+SCAN OUTPUT SUMMARY:
+{key metrics from scan: Next.js version, routing strategy, dependencies, file counts}
+
+VALIDATE:
+1. Cross-check Server/Client component boundaries are consistent across ALL files
+2. Verify import paths match the architecture structure
+3. Confirm every file has both ARCHITECTURAL and IMPLEMENTATION layers
+4. Check for duplicate/conflicting patterns between files
+5. Verify {placeholders} are used consistently (not hardcoded names)
+6. Check Server Actions + data fetching + forms patterns are aligned
+7. Check decision log entries exist for major tool/pattern choices
+
+OUTPUT: A validation report with conflicts, missing items, and fixes applied.
+```
+
+### Manual activation
+
+The user can also request parallel extraction on any project size:
+- "scan with subagents" / "use parallel extraction" / "deep scan"
+- "scan my project at /path --parallel"
+
+When manually activated on a small project, it provides deeper coverage (more files read per category) even though the context window isn't at risk.
+
+### Assembly
+
+After the validator completes, the coordinator (main agent) uses the validated reference files to proceed with Phase 2 (Generate the Skill) as normal. The reference files are already produced -- the coordinator only needs to assemble the SKILL.md, .context/, and do final verification.
 
 ---
 

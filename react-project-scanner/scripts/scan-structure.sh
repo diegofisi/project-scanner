@@ -29,6 +29,18 @@ echo "  CODEBASE SCANNER"
 echo "  Project: $PROJECT_PATH"
 echo "========================================="
 
+# ── PROJECT SIZE DETECTION ──────────────────────────────────────
+TOTAL_FILES=$(find "$SRC" -type f -not -path "*/node_modules/*" -not -path "*/.next/*" -not -path "*/dist/*" -not -path "*/build/*" 2>/dev/null | wc -l)
+echo ""
+echo "── PROJECT SIZE ──"
+echo "  PROJECT_SIZE: $TOTAL_FILES files"
+if [ "$TOTAL_FILES" -gt 2000 ]; then
+  echo "  LARGE_PROJECT: true"
+  echo "  RECOMMENDATION: Use parallel extraction mode (subagents) for better coverage"
+else
+  echo "  LARGE_PROJECT: false"
+fi
+
 # ── 0. REPOMIX DETECTION ─────────────────────────────────────────────
 echo ""
 echo "── REPOMIX ──"
