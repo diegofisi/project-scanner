@@ -121,6 +121,45 @@ Produces the output skill with:
 #### Phase 4 - Verify
 Validates against a comprehensive checklist (imports resolve, naming conventions match, patterns are consistent, etc.)
 
+## Parallel Extraction Mode (large projects)
+
+For projects with **2,000+ source files**, or when manually requested, the scanners automatically switch to **Parallel Extraction Mode** using subagents to avoid context window exhaustion.
+
+### How it works
+
+```
+┌─────────────────────────────────────────────────────┐
+│  COORDINATOR (main agent)                           │
+│  1. Runs scan-structure.sh                          │
+│  2. Detects LARGE_PROJECT: true (or user request)   │
+│  3. Spawns 8 extraction subagents in parallel       │
+│  4. Spawns validator agent after all complete        │
+│  5. Assembles final SKILL.md + .context/            │
+└──────────┬──────────────────────────────┬───────────┘
+           │                              │
+     ┌─────▼─────┐                  ┌─────▼─────┐
+     │ 8 EXTRACT │  (parallel)      │ VALIDATOR  │  (sequential)
+     │ SUBAGENTS │ ──────────────►  │   AGENT    │
+     └───────────┘                  └───────────-┘
+```
+
+Each extraction subagent focuses on a single concern (architecture, components, data layer, state, forms, routing, testing, coding style) and reads only the files relevant to its category. This keeps each agent's context clean and focused.
+
+The **validator agent** runs after all extractors finish and:
+- Cross-checks consistency between all reference files
+- Verifies naming conventions, import paths, and data flow patterns align
+- Ensures every file has both architecture + implementation layers
+- Applies fixes to any conflicts found
+
+### Activation
+
+| Trigger | How |
+|---------|-----|
+| **Automatic** | Scan output shows `LARGE_PROJECT: true` (>= 2000 files) |
+| **Manual** | User says: "deep scan", "parallel scan", "scan with subagents", or adds `--parallel` |
+
+Manual activation on smaller projects provides deeper coverage (more files read per category).
+
 ## Output Structure
 
 After scanning a project called `my-app`, the generated skill looks like:
