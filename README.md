@@ -15,6 +15,8 @@ Each scanner analyzes a real project and produces:
 | `nextjs-project-scanner` | Next.js (App Router, Pages, hybrid) | Server/Client Components, Server Actions, ISR, streaming, API routes |
 | `flutter-project-scanner` | Flutter / Dart | Clean Architecture, BLoC/Riverpod, Freezed models, GoRouter, DI |
 | `python-fastapi-project-scanner` | Python FastAPI | Routers, Pydantic schemas, SQLAlchemy, repository pattern, JWT auth |
+| `express-project-scanner` | Node.js Express | Routes, controllers, services, middleware, Prisma/Sequelize/Mongoose, JWT |
+| `nestjs-project-scanner` | NestJS | Modules, controllers, providers, guards, interceptors, DTOs, TypeORM/Prisma |
 
 ## Installation
 
@@ -37,7 +39,9 @@ You can register them globally or per-project:
     "/path/to/react-project-scanner",
     "/path/to/nextjs-project-scanner",
     "/path/to/flutter-project-scanner",
-    "/path/to/python-fastapi-project-scanner"
+    "/path/to/python-fastapi-project-scanner",
+    "/path/to/express-project-scanner",
+    "/path/to/nestjs-project-scanner"
   ]
 }
 ```
